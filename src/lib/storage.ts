@@ -1,5 +1,4 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import { getRedis } from '@/lib/redis';
 
 export type TicketEvent = {
   id: string;
@@ -8,21 +7,10 @@ export type TicketEvent = {
   createdAt: string;
 };
 
-const dataDir = path.join(process.cwd(), 'data');
-const dataFile = path.join(dataDir, 'events.json');
-
-async function ensureStore(): Promise<void> {
-  try {
-    await fs.mkdir(dataDir, { recursive: true });
-    await fs.access(dataFile);
-  } catch {
-    await fs.writeFile(dataFile, JSON.stringify([], null, 2), 'utf8');
-  }
-}
-
 export async function readEvents(): Promise<TicketEvent[]> {
-  await ensureStore();
-  const raw = await fs.readFile(dataFile, 'utf8');
+  const redis = await getRedis();
+  const raw = await redis.get('events');
+  if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed as TicketEvent[];
@@ -33,8 +21,8 @@ export async function readEvents(): Promise<TicketEvent[]> {
 }
 
 export async function writeEvents(events: TicketEvent[]): Promise<void> {
-  await ensureStore();
-  await fs.writeFile(dataFile, JSON.stringify(events, null, 2), 'utf8');
+  const redis = await getRedis();
+  await redis.set('events', JSON.stringify(events));
 }
 
 function isValidDateString(value: string): boolean {

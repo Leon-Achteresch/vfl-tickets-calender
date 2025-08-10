@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { readEvents } from '@/lib/storage';
 import { NextResponse } from 'next/server';
 
